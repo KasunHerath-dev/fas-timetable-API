@@ -75,14 +75,14 @@ describe('DeveloperDocs Component', () => {
     // Switch to cURL
     const curlTab = screen.getByRole('button', { name: /cURL \/ REST/i });
     fireEvent.click(curlTab);
-    expect(screen.getByText(/curl -X GET/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/curl -X GET/i).length).toBeGreaterThan(0);
   });
 
   it('displays the data dictionary including validationStatus and warnings', () => {
     render(<DeveloperDocs onNavigateHome={vi.fn()} />);
 
     expect(screen.getByText('rawCellText')).toBeInTheDocument();
-    expect(screen.getByText('validationStatus')).toBeInTheDocument();
+    expect(screen.getAllByText('validationStatus').length).toBeGreaterThan(0);
     expect(screen.getAllByText('warnings').length).toBeGreaterThan(0);
     expect(
       screen.getByText(/Displaying Review Warnings to Students \(Do Not Silently Confirm\)/i)
