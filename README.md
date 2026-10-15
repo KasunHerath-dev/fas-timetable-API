@@ -296,26 +296,62 @@ Configure these under **Settings** -> **Secrets and variables** -> **Actions**:
 
 ## Vercel Deployment Setup
 
-Vercel hosts the student-facing application and the compatible read-only FastAPI service from a single repository deployment.
+Vercel hosts the student-facing application and the compatible read-only FastAPI service as a single unified service deployed from the repository root.
 
 ### 1. Deployment Architecture
-- **Frontend**: React + Vite static bundle built to `frontend/dist/` via `npm run build --prefix frontend`.
-- **Backend API**: FastAPI ASGI application hosted as a Vercel Serverless Function via `api/index.py`.
-- **Routing**: `vercel.json` rewrites all `/api/(.*)` requests directly to `/api/index.py`, while serving frontend assets for all other paths.
-- **Artifact Protection**: `.vercelignore` guarantees that local `.env` files, temporary PDFs in `downloads/`, Python test files, and metadata are excluded from the Vercel deployment bundle.
 
-### 2. Required Vercel Environment Variables
+- **Deployment Root**: Repository Root (`./`). Both frontend assets and backend serverless endpoints must be deployed together from the repository root.
+- **Frontend**: React + Vite static bundle built into `frontend/dist/` via `npm run build --prefix frontend`.
+- **Backend API**: FastAPI ASGI application hosted as a Vercel Python Serverless Function via `api/index.py` (and root `index.py`).
+- **Routing**: `vercel.json` routes all `/api/(.*)` and `/api` requests to `/api/index.py`, while rewriting all non-API paths to `/index.html` for client-side SPA routing (`/` and `/developers`).
+- **Artifact Protection**: `.vercelignore` guarantees that local `.env` files, temporary PDFs in `downloads/`, Python test files, and local build artifacts are excluded from the deployment.
+
+### 2. Exact Vercel Dashboard Project Settings
+
+Configure these settings under **Project Settings** -> **General** on the Vercel Dashboard:
+
+| Setting | Value | Notes |
+| :--- | :--- | :--- |
+| **Root Directory** | `./` (or leave empty) | **CRITICAL**: Do **NOT** set to `frontend`. Setting `frontend` isolates the build from `api/index.py` and `requirements.txt`. |
+| **Framework Preset** | `Vite` (or `Other`) | Managed cleanly via `vercel.json`. |
+| **Build Command** | `npm run build --prefix frontend` | If toggle is enabled, or leave toggle disabled to use `vercel.json`. |
+| **Install Command** | `npm install --prefix frontend` | If toggle is enabled, or leave toggle disabled to use `vercel.json`. |
+| **Output Directory** | `frontend/dist` | Points Vercel's edge network to the Vite production bundle. |
+
+### 3. Root Cause Analysis: `frontend/frontend/package.json` Error
+
+If the build log displays:
+```text
+npm error path /vercel/path0/frontend/frontend/package.json
+ENOENT: no such file or directory, open '/vercel/path0/frontend/frontend/package.json'
+Command "npm run build --prefix frontend" exited with 254
+```
+**Cause**: The Vercel Dashboard's **Root Directory** was set to `frontend`. When Vercel changed its working directory to `/vercel/path0/frontend`, executing `npm run build --prefix frontend` caused npm to look inside `/vercel/path0/frontend/frontend/package.json`.
+**Solution**:
+1. In Vercel Project Settings -> **General**, reset **Root Directory** to `./` (root).
+2. The repository includes a root `package.json` and a root-aware `vercel.json` with explicit `installCommand` and `buildCommand`.
+
+### 4. Required Vercel Environment Variables
 
 Set these in the **Vercel Project Settings** -> **Environment Variables**:
 
 | Variable | Environment | Description |
 | :--- | :--- | :--- |
 | `MONGODB_URI` | Production, Preview, Development | MongoDB Atlas connection URI for the read-only API. |
-| `MONGODB_DATABASE` | Production, Preview, Development | Target database name (e.g. `fas_timetable`). |
-| `CORS_ORIGINS` | Production, Preview | Comma-separated list of allowed origins (e.g. `https://your-domain.vercel.app`). |
+| `MONGODB_DATABASE` | Production, Preview, Development | Target database name (`fas_timetable`). |
+| `CORS_ORIGINS` | Production, Preview | Optional comma-separated list of allowed origins. Defaults to matching all `*.vercel.app` domains. |
 | `VITE_API_BASE_URL` | Production (Optional) | Public API base URL. Omit or leave empty when API and frontend share the same Vercel deployment. |
 
-> **Security Warning**: Never expose `MONGODB_URI` in any `VITE_` variable. `VITE_` variables are bundled directly into public client JavaScript.
+> **Security Warning**: Never expose `MONGODB_URI` in any `VITE_` variable or client-facing config. `VITE_` variables are bundled directly into public client JavaScript.
+
+### 5. Verification After Deployment
+
+Once deployed on Vercel, verify all layers:
+1. **Frontend App**: Visit `https://<your-project>.vercel.app/` — verify student timetable grid and filters load.
+2. **Developer Documentation**: Visit `https://<your-project>.vercel.app/developers` directly and refresh — verify no 404 error occurs and copyable Base URL displays `https://<your-project>.vercel.app/api`.
+3. **API Health**: Visit `https://<your-project>.vercel.app/api/health` — should return `{"status": "ok", "database": "connected"}`.
+4. **API Timetables**: Visit `https://<your-project>.vercel.app/api/timetables` — returns metadata array.
+5. **Level 2 Sessions**: Visit `https://<your-project>.vercel.app/api/timetables/2/sessions` — returns session list.
 
 ---
 
@@ -549,7 +585,7 @@ fas-timetable-downloader/
 
 ## Running Automated Tests
 
-### 1. Python Backend & Worker Tests (74 Tests)
+### 1. Python Backend & Worker Tests (77 Tests)
 
 Run the full Python test suite (covers scraper, PDF inspector, selection algorithm, manifest, coordinate-aware parser, regression cases, MongoDB Atlas repository, FastAPI endpoints, worker change detection, and validation guard):
 
@@ -557,11 +593,16 @@ Run the full Python test suite (covers scraper, PDF inspector, selection algorit
 python -m unittest discover -s tests -v
 ```
 
-### 2. Frontend Vitest Tests (5 Tests)
+### 2. Frontend Vitest Tests (14 Tests)
 
-Run the frontend test suite (covers loading states, API error and retry states, session rendering, unverified badge indicators, Friday lunch session visibility, and empty search states):
+Run the frontend test suite (covers loading states, API error and retry states, session rendering, unverified badge indicators, Friday lunch session visibility, empty search states, Developer API documentation page, copy actions, and client-side routing):
 
 ```bash
 cd frontend
+npm test
+```
+
+Or from repository root:
+```bash
 npm test
 ```

@@ -162,6 +162,69 @@ class TestTimetableAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertIn("Database service unavailable", response.json()["detail"])
 
+    def test_level_2_sessions_and_status(self):
+        self.mock_repo.get_timetables.return_value = [
+            {"level": 2, "academicYear": "2024/2025", "semester": "Semester I"}
+        ]
+        self.mock_repo.get_level_status.return_value = {
+            "level": 2,
+            "academicYear": "2024/2025",
+            "semester": "Semester I",
+            "totalSessions": 38,
+            "validSessions": 38,
+            "needsReviewSessions": 0,
+            "sessionTypes": {"Lecture": 20, "Practical": 18},
+        }
+        self.mock_repo.get_sessions.return_value = [
+            {
+                "id": "s2-cmis",
+                "level": 2,
+                "academicYear": "2024/2025",
+                "semester": "Semester I",
+                "day": "Friday",
+                "startTime": "12:30",
+                "endTime": "14:30",
+                "subjectCode": "CMIS 2113",
+                "sessionType": "Practical",
+                "group": "Gp. IV",
+                "location": "LR-07",
+                "rawCellText": "CMIS 2113 (P)\nGp. IV",
+                "validationStatus": "VALID",
+                "warnings": [],
+            }
+        ]
+
+        # Test /api/timetables/2/status
+        res_status = self.client.get("/api/timetables/2/status")
+        self.assertEqual(res_status.status_code, 200)
+        self.assertEqual(res_status.json()["level"], 2)
+
+        # Test /api/timetables/2/sessions
+        res_sessions = self.client.get("/api/timetables/2/sessions")
+        self.assertEqual(res_sessions.status_code, 200)
+        self.assertEqual(res_sessions.json()["level"], 2)
+        self.assertEqual(len(res_sessions.json()["sessions"]), 1)
+        self.assertEqual(res_sessions.json()["sessions"][0]["subjectCode"], "CMIS 2113")
+
+    def test_unprefixed_serverless_routes(self):
+        """Verify routes respond correctly if Vercel strips the /api prefix."""
+        self.mock_repo.ping.return_value = True
+        self.mock_repo.get_timetables.return_value = []
+
+        res_health = self.client.get("/health")
+        self.assertEqual(res_health.status_code, 200)
+        self.assertEqual(res_health.json()["status"], "ok")
+
+        res_timetables = self.client.get("/timetables")
+        self.assertEqual(res_timetables.status_code, 200)
+
+    def test_root_index_exports_app(self):
+        """Verify root index.py and api/index.py export the identical FastAPI app."""
+        import index
+        import api.index
+        self.assertIs(index.app, app)
+        self.assertIs(api.index.app, app)
+
 
 if __name__ == "__main__":
     unittest.main()

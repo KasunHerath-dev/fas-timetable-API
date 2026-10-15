@@ -28,5 +28,11 @@
     "tailwindcss": "^3.4.19",
     "vite": "^8.3.0",
     "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "chokidar": {
+      "braces": "^3.0.3"
+    },
+    "postcss-selector-parser": "^7.1.6"
   }
 }

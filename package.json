@@ -1,0 +1,10 @@
+{
+  "name": "fas-timetable-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FAS WUSL Academic Timetable Portal & API",
+  "scripts": {
+    "build": "npm run build --prefix frontend",
+    "test": "npm test --prefix frontend"
+  }
+}

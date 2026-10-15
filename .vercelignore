@@ -26,5 +26,7 @@ tests/
 .git/
 .gitignore
 
-# Frontend node_modules
+# Frontend & Node node_modules
+node_modules/
 frontend/node_modules/
+*.log

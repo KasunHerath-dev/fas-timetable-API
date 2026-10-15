@@ -22,6 +22,7 @@ fas_worker_*
 !.env.example
 
 # Frontend & Node
+node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/.env
