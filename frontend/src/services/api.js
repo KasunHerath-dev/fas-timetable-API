@@ -2,7 +2,8 @@
  * API service for FAS WUSL Timetable Application
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const rawBase = (import.meta.env?.VITE_API_BASE_URL || '').trim();
+const API_BASE = rawBase ? rawBase.replace(/\/+$/, '').replace(/\/api$/, '') : '';
 
 /**
  * Fetch health status of API and database
