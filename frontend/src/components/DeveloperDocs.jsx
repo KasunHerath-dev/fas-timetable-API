@@ -14,6 +14,7 @@ import {
   Layers,
   BookOpen,
 } from 'lucide-react';
+import { GithubIcon } from './Navbar';
 
 export function getResolvedApiBaseUrl() {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -27,7 +28,7 @@ export function getResolvedApiBaseUrl() {
   return '/api';
 }
 
-export default function DeveloperDocs({ onNavigateHome }) {
+export default function DeveloperDocs({ onNavigateHome, onNavigateToReadme }) {
   const [copiedId, setCopiedId] = useState(null);
   const [activeCodeTab, setActiveCodeTab] = useState('javascript');
 
@@ -355,10 +356,10 @@ curl -X GET "${apiBaseUrl}/health"`;
             </div>
 
             {/* Right: Actions */}
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-1.5 sm:space-x-2.5">
               <button
                 onClick={() => handleCopy(docsPageUrl, 'share-page')}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                className="inline-flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
                 title="Copy shareable link to this documentation page"
               >
                 {copiedId === 'share-page' ? (
@@ -374,9 +375,31 @@ curl -X GET "${apiBaseUrl}/health"`;
                 )}
               </button>
 
+              {onNavigateToReadme && (
+                <button
+                  onClick={onNavigateToReadme}
+                  className="inline-flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                  title="View project README documentation"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-brand-600" />
+                  <span className="hidden sm:inline">README</span>
+                </button>
+              )}
+
+              <a
+                href="https://github.com/KasunHerath-dev/fas-timetable-downloader"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-2xs transition-colors"
+                title="View GitHub Repository"
+              >
+                <GithubIcon className="w-3.5 h-3.5 text-slate-700" />
+                <span className="hidden md:inline">GitHub</span>
+              </a>
+
               <button
                 onClick={onNavigateHome}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg transition-colors cursor-pointer"
                 aria-label="Student Timetable Portal"
               >
                 <Calendar className="w-3.5 h-3.5 text-brand-600" />
@@ -822,13 +845,54 @@ curl -X GET "${apiBaseUrl}/health"`;
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-1">
+      <footer className="bg-white border-t border-slate-200 py-8 text-center text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
           <p className="font-semibold text-slate-700">
             FAS WUSL Timetable API • Faculty of Applied Sciences, Wayamba University of Sri Lanka
           </p>
           <p>
             Free and public read-only service for university students, faculty, and developers.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-slate-600 pt-1">
+            <button
+              onClick={onNavigateHome}
+              className="hover:text-brand-700 font-medium cursor-pointer"
+            >
+              Timetable Portal
+            </button>
+            {onNavigateToReadme && (
+              <>
+                <span className="text-slate-300">•</span>
+                <button
+                  onClick={onNavigateToReadme}
+                  className="hover:text-brand-700 font-medium cursor-pointer"
+                >
+                  Project README
+                </button>
+              </>
+            )}
+            <span className="text-slate-300">•</span>
+            <a
+              href="https://github.com/KasunHerath-dev/fas-timetable-downloader"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center space-x-1.5"
+            >
+              <GithubIcon className="w-3.5 h-3.5" />
+              <span>GitHub Repository</span>
+            </a>
+          </div>
+          <p className="text-[11px] text-slate-400 pt-1">
+            Maintained by{' '}
+            <a
+              href="https://github.com/KasunHerath-dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-slate-600 hover:text-brand-600 underline"
+            >
+              Kasun Herath
+            </a>{' '}
+            • Open Source Under MIT License
           </p>
         </div>
       </footer>

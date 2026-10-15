@@ -38,7 +38,7 @@ export default function FilterControls({
                 <button
                   key={lvl}
                   onClick={() => onSelectLevel(lvl)}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer flex items-center justify-center ${
+                  className={`px-2 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center ${
                     active
                       ? 'bg-brand-600 text-white shadow-sm shadow-brand-200 ring-2 ring-brand-600 ring-offset-1'
                       : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'

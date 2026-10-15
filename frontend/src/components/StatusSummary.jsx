@@ -42,7 +42,7 @@ export default function StatusSummary({ metadata, status, selectedLevel }) {
         </div>
 
         {/* Verification metrics & badges */}
-        <div className="flex items-center space-x-2 sm:space-x-3 text-xs">
+        <div className="flex items-center flex-wrap gap-2 text-xs">
           <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-slate-700">
             <span className="text-slate-400 font-normal">Total:</span>
             <span className="font-bold text-slate-900">{total}</span>

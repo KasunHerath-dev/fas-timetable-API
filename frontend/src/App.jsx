@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import Navbar from './components/Navbar';
+import Navbar, { GithubIcon } from './components/Navbar';
 import StatusSummary from './components/StatusSummary';
 import FilterControls from './components/FilterControls';
 import WeeklyGrid from './components/WeeklyGrid';
 import DailyView from './components/DailyView';
 import SessionModal from './components/SessionModal';
 import DeveloperDocs from './components/DeveloperDocs';
+import ReadmeViewer from './components/ReadmeViewer';
 import { getHealthStatus, getTimetables, getSessions, getLevelStatus } from './services/api';
 import { AlertCircle, RefreshCw, Calendar, Search } from 'lucide-react';
 
@@ -86,7 +87,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (currentPath === '/developers' || currentPath.startsWith('/developers')) return;
+    if (
+      currentPath === '/developers' ||
+      currentPath.startsWith('/developers') ||
+      currentPath === '/readme' ||
+      currentPath.startsWith('/readme')
+    ) {
+      return;
+    }
     loadInitialData();
   }, [loadInitialData, currentPath]);
 
@@ -124,7 +132,14 @@ export default function App() {
   }, [selectedLevel, selectedYear, selectedSemester]);
 
   useEffect(() => {
-    if (currentPath === '/developers' || currentPath.startsWith('/developers')) return;
+    if (
+      currentPath === '/developers' ||
+      currentPath.startsWith('/developers') ||
+      currentPath === '/readme' ||
+      currentPath.startsWith('/readme')
+    ) {
+      return;
+    }
     loadLevelData();
   }, [loadLevelData, currentPath]);
 
@@ -185,9 +200,24 @@ export default function App() {
     }
   };
 
+  // Route switch: Project README Viewer
+  if (currentPath === '/readme' || currentPath.startsWith('/readme')) {
+    return (
+      <ReadmeViewer
+        onNavigateHome={() => navigateTo('/')}
+        onNavigateToDevelopers={() => navigateTo('/developers')}
+      />
+    );
+  }
+
   // Route switch: Developer API Documentation
   if (currentPath === '/developers' || currentPath.startsWith('/developers')) {
-    return <DeveloperDocs onNavigateHome={() => navigateTo('/')} />;
+    return (
+      <DeveloperDocs
+        onNavigateHome={() => navigateTo('/')}
+        onNavigateToReadme={() => navigateTo('/readme')}
+      />
+    );
   }
 
   return (
@@ -198,6 +228,7 @@ export default function App() {
         onRefresh={loadLevelData}
         loading={loading}
         onNavigateToDevelopers={() => navigateTo('/developers')}
+        onNavigateToReadme={() => navigateTo('/readme')}
       />
 
       {/* Main Content Area */}
@@ -302,15 +333,15 @@ export default function App() {
       />
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-2">
+      <footer className="bg-white border-t border-slate-200 py-8 text-center text-xs text-slate-500 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
           <p className="font-semibold text-slate-700">
             Faculty of Applied Sciences • Wayamba University of Sri Lanka (WUSL)
           </p>
           <p>
             Data synchronized from official timetable PDF releases via coordinate-aware parsing.
           </p>
-          <p>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-slate-600 pt-1">
             <a
               href="/developers"
               onClick={(e) => {
@@ -321,6 +352,39 @@ export default function App() {
             >
               <span>Developer API Documentation</span>
             </a>
+            <span className="text-slate-300">•</span>
+            <a
+              href="/readme"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateTo('/readme');
+              }}
+              className="text-brand-600 hover:text-brand-800 font-medium underline inline-flex items-center space-x-1"
+            >
+              <span>Project README</span>
+            </a>
+            <span className="text-slate-300">•</span>
+            <a
+              href="https://github.com/KasunHerath-dev/fas-timetable-downloader"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center space-x-1.5"
+            >
+              <GithubIcon className="w-3.5 h-3.5" />
+              <span>GitHub Repository</span>
+            </a>
+          </div>
+          <p className="text-[11px] text-slate-400 pt-1">
+            Maintained by{' '}
+            <a
+              href="https://github.com/KasunHerath-dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-slate-600 hover:text-brand-600 underline"
+            >
+              Kasun Herath
+            </a>{' '}
+            • Open Source Under MIT License
           </p>
         </div>
       </footer>

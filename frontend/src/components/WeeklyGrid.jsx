@@ -36,7 +36,13 @@ export default function WeeklyGrid({ sessions, onSessionClick }) {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* Mobile scroll hint */}
+      <div className="sm:hidden flex items-center justify-between px-3.5 py-2 bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500 font-medium">
+        <span>👉 Swipe horizontally to view all days</span>
+        <span className="text-brand-700 font-semibold">5 Days</span>
+      </div>
+
+      <div className="overflow-x-auto touch-pan-x">
         <table className="w-full min-w-[850px] border-collapse text-left">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">

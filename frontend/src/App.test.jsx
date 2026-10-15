@@ -254,4 +254,63 @@ describe('FAS WUSL Timetable App', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Canonical API Base URL/i)).toBeInTheDocument();
   });
+
+  it('navigates to Project README viewer when README button is clicked, and returns home', async () => {
+    window.history.pushState({}, '', '/');
+    api.getHealthStatus.mockResolvedValue({ status: 'ok', database: 'connected' });
+    api.getTimetables.mockResolvedValue([]);
+    api.getSessions.mockResolvedValue({ level: 1, sessions: [] });
+    api.getLevelStatus.mockResolvedValue({ level: 1, totalSessions: 0 });
+
+    render(<App />);
+
+    const readmeButtons = screen.getAllByRole('button', { name: /README/i });
+    fireEvent.click(readmeButtons[0]);
+
+    expect(
+      screen.getByRole('heading', { name: /Project README/i })
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/readme');
+
+    // Click back to timetable button to return
+    const returnBtn = screen.getByRole('button', { name: /Back to Timetables/i });
+    fireEvent.click(returnBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Academic Timetable Portal')).toBeInTheDocument();
+      expect(window.location.pathname).toBe('/');
+    });
+  });
+
+  it('renders Project README page directly when pathname is /readme', () => {
+    window.history.pushState({}, '', '/readme');
+    render(<App />);
+
+    expect(
+      screen.getByRole('heading', { name: /Project README/i })
+    ).toBeInTheDocument();
+  });
+
+  it('renders footer with Kasun Herath maintainer credits and GitHub repository link', async () => {
+    window.history.pushState({}, '', '/');
+    api.getHealthStatus.mockResolvedValue({ status: 'ok', database: 'connected' });
+    api.getTimetables.mockResolvedValue([]);
+    api.getSessions.mockResolvedValue({ level: 1, sessions: [] });
+    api.getLevelStatus.mockResolvedValue({ level: 1, totalSessions: 0 });
+
+    render(<App />);
+
+    const maintainerLink = screen.getByRole('link', { name: /Kasun Herath/i });
+    expect(maintainerLink).toBeInTheDocument();
+    expect(maintainerLink).toHaveAttribute('href', 'https://github.com/KasunHerath-dev');
+    expect(maintainerLink).toHaveAttribute('target', '_blank');
+    expect(maintainerLink).toHaveAttribute('rel', 'noopener noreferrer');
+
+    const githubRepoLink = screen.getByRole('link', { name: /GitHub Repository/i });
+    expect(githubRepoLink).toBeInTheDocument();
+    expect(githubRepoLink).toHaveAttribute(
+      'href',
+      'https://github.com/KasunHerath-dev/fas-timetable-downloader'
+    );
+  });
 });

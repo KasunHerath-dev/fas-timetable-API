@@ -20,7 +20,10 @@ A lightweight Python tool that automatically discovers and downloads the latest 
 - **Guaranteed Temporary Artifact Cleanup**: Downloads candidate PDFs only into isolated temporary workspaces (`tempfile.TemporaryDirectory`) and deletes all files after processing, retaining zero permanent PDFs.
 - **GitHub Actions Scheduled Worker**: Runs automatically via GitHub Actions cron schedule (`0 0 * * *` UTC) with concurrency control, secret masking, and failure alerting.
 - **Vercel Full-Stack Compatibility**: Deploys the student-facing React frontend and read-only FastAPI API as a single unified service via Vercel serverless function routing.
+- **Interactive In-App README Viewer (`/readme`)**: Synchronized build-time Markdown reader with Table of Contents navigation, search filter, copyable code blocks, and maintainer credits.
+- **Public Developer REST API Reference (`/developers`)**: Comprehensive API documentation with copyable canonical Base URL, query parameter dictionary, and runnable code snippets in JavaScript, Python, and cURL.
 - **Flexible CLI Options**: Supports `--worker` for production runs, `--dry-run` to preview selections, `--parse-only` to parse existing PDFs without downloading, and `--skip-mongodb` to run without database connectivity.
+- **Maintainer**: Created and maintained by [Kasun Herath](https://github.com/KasunHerath-dev) • Open source under the MIT License.
 
 ---
 
@@ -593,9 +596,9 @@ Run the full Python test suite (covers scraper, PDF inspector, selection algorit
 python -m unittest discover -s tests -v
 ```
 
-### 2. Frontend Vitest Tests (14 Tests)
+### 2. Frontend Vitest Tests (21 Tests)
 
-Run the frontend test suite (covers loading states, API error and retry states, session rendering, unverified badge indicators, Friday lunch session visibility, empty search states, Developer API documentation page, copy actions, and client-side routing):
+Run the frontend test suite (covers loading states, API error and retry states, session rendering, unverified badge indicators, Friday lunch session visibility, empty search states, Developer API documentation page, copy actions, in-app README markdown viewer, and client-side routing):
 
 ```bash
 cd frontend
