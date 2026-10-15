@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Temporary files and PDF downloads
+*.tmp
+.pytest_cache/
+downloads/
+*.pdf
+fas_worker_*
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Frontend & Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+!frontend/.env.example
+
+# Vercel build output
+.vercel/

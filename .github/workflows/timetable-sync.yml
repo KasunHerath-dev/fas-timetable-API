@@ -1,0 +1,62 @@
+name: FAS WUSL Daily Timetable Sync
+
+on:
+  schedule:
+    # Run every 24 hours at 00:00 UTC (05:30 Sri Lanka Time / IST)
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force re-parsing and re-synchronizing even if SHA-256 hash matches'
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Preview changes without modifying MongoDB Atlas'
+        required: false
+        type: boolean
+        default: false
+
+# Prevent concurrent runs from writing inconsistent data to MongoDB
+concurrency:
+  group: timetable-sync
+  cancel-in-progress: false
+
+# Minimal permissions required for repository checkout
+permissions:
+  contents: read
+
+jobs:
+  sync-timetables:
+    name: Sync Timetables to MongoDB Atlas
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute Timetable Production Worker
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DATABASE: ${{ vars.MONGODB_DATABASE || 'fas_timetable' }}
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python -m src.worker $ARGS

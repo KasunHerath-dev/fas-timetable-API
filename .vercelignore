@@ -1,0 +1,30 @@
+# Secrets and environment files
+.env
+.env.*
+.env.local
+frontend/.env
+frontend/.env.local
+
+# Timetable PDFs and temporary files
+downloads/
+*.pdf
+data/
+metadata/
+*.tmp
+
+# Python virtual environment and bytecode
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Development, tests, and workflows
+tests/
+.github/
+.git/
+.gitignore
+
+# Frontend node_modules
+frontend/node_modules/
