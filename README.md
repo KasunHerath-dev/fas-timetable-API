@@ -609,3 +609,11 @@ Or from repository root:
 ```bash
 npm test
 ```
+
+---
+
+## Developed by
+
+This project was developed by [Kasun Herath](https://github.com/KasunHerath-dev).
+
+GitHub: https://github.com/KasunHerath-dev
