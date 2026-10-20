@@ -639,6 +639,200 @@ curl -X GET "${LIVE_BASE_URL}/timetables/1/sessions?subjectCode=CMIS" \\
         { code: 503, reason: 'Database unavailable' },
       ],
     },
+    {
+      method: 'GET',
+      path: '/api/academic-calendar',
+      summary: 'List available academic calendars',
+      description: 'Returns all available academic calendar documents and their metadata, including academic year, document revision status (approved, revised, draft), covered levels and semesters, SHA-256 fingerprint, and activity counts.',
+      params: [
+        { name: 'academicYear', in: 'query', type: 'string', required: false, description: 'Filter by academic year (e.g. "2024/2025" or "2024-2025").' },
+        { name: 'status', in: 'query', type: 'string', required: false, description: 'Filter by document status ("approved", "revised", "draft").' },
+      ],
+      curlExample: `# List all academic calendars
+curl -X GET "${LIVE_BASE_URL}/academic-calendar" \\
+  -H "Accept: application/json"`,
+      exampleResponse: [
+        {
+          id: 'cal_2024_2025_approved_6ca12081',
+          calendarId: 'cal_2024_2025_approved_6ca12081',
+          academicYear: '2024/2025',
+          academicYearStart: 2024,
+          academicYearEnd: 2025,
+          documentTitle: 'CALENDAR OF DATES',
+          documentStatus: 'approved',
+          revision: 'Original',
+          levels: [1, 2, 3, 4],
+          semesters: ['Semester I', 'Semester II'],
+          sourceUrl: 'https://fas.wyb.ac.lk/wp-content/uploads/2026/07/COD-2024-2025.pdf',
+          publicationDate: '2026-07-17',
+          signatureDate: '2026-07-03',
+          sha256: '6ca12081e4b8948cc161e130503931060303a1982961e84c19698b80d983c964',
+          validationStatus: 'VALID',
+          activitiesCount: 14,
+          isCurrent: true,
+          isCurrentConfirmed: true,
+        },
+      ],
+      errorCodes: [
+        { code: 503, reason: 'Database service unavailable' },
+      ],
+    },
+    {
+      method: 'GET',
+      path: '/api/academic-calendar/current',
+      summary: 'Get authoritative current academic calendar',
+      description: 'Returns the verified active official academic calendar including all structured activities, date ranges, duration labels, and confirmation metadata. If multiple conflicting documents exist or evidence is insufficient, current status is explicitly flagged as unconfirmed.',
+      params: [],
+      curlExample: `curl -X GET "${LIVE_BASE_URL}/academic-calendar/current" \\
+  -H "Accept: application/json"`,
+      exampleResponse: {
+        id: 'cal_2024_2025_approved_6ca12081',
+        academicYear: '2024/2025',
+        documentTitle: 'CALENDAR OF DATES',
+        documentStatus: 'approved',
+        levels: [1, 2, 3, 4],
+        semesters: ['Semester I', 'Semester II'],
+        signatureDate: '2026-07-03',
+        publicationDate: '2026-07-17',
+        isCurrent: true,
+        isCurrentConfirmed: true,
+        selectionReason: 'Verified official approved calendar for Academic Year 2024/2025',
+        activitiesCount: 14,
+        activities: [
+          {
+            activity: 'Academic Session',
+            category: 'academic_session',
+            semester: 'Semester I',
+            startDate: '2026-08-03',
+            endDate: '2026-09-27',
+            durationRaw: '08 Weeks',
+            durationWeeks: 8.0,
+            validationStatus: 'VALID',
+            warnings: [],
+          },
+        ],
+      },
+      errorCodes: [
+        { code: 404, reason: 'No official academic calendar found' },
+        { code: 503, reason: 'Database service unavailable' },
+      ],
+    },
+    {
+      method: 'GET',
+      path: '/api/academic-calendar/{academic_year}',
+      summary: 'Get calendar for a specific academic year',
+      description: 'Retrieves the complete academic calendar for the specified academic period. Handles both slash and hyphen notation (e.g. "2024-2025" or "2024%2F2025").',
+      params: [
+        { name: '{academic_year}', in: 'path', type: 'string', required: true, description: 'Academic year, e.g. "2024-2025" or "2024/2025".' },
+      ],
+      curlExample: `curl -X GET "${LIVE_BASE_URL}/academic-calendar/2024-2025" \\
+  -H "Accept: application/json"`,
+      exampleResponse: {
+        academicYear: '2024/2025',
+        documentTitle: 'CALENDAR OF DATES',
+        documentStatus: 'approved',
+        levels: [1, 2, 3, 4],
+        semesters: ['Semester I', 'Semester II'],
+        activitiesCount: 14,
+      },
+      errorCodes: [
+        { code: 404, reason: 'Academic calendar not found for specified year' },
+        { code: 503, reason: 'Database service unavailable' },
+      ],
+    },
+    {
+      method: 'GET',
+      path: '/api/academic-calendar/{academic_year}/semesters/{semester}',
+      summary: 'Get activities for a specific semester in an academic year',
+      description: 'Filters schedule activities to a specific semester. Accepts canonical names ("Semester I", "Semester II") or shorthand numbers ("1", "2").',
+      params: [
+        { name: '{academic_year}', in: 'path', type: 'string', required: true, description: 'Academic year (e.g. "2024-2025").' },
+        { name: '{semester}', in: 'path', type: 'string', required: true, description: 'Semester name (e.g. "Semester I", "Semester II", or "1").' },
+      ],
+      curlExample: `curl -X GET "${LIVE_BASE_URL}/academic-calendar/2024-2025/semesters/Semester%20I" \\
+  -H "Accept: application/json"`,
+      exampleResponse: {
+        academicYear: '2024/2025',
+        semester: 'Semester I',
+        startDate: '2026-08-03',
+        endDate: '2027-01-17',
+        totalActivities: 8,
+        activities: [],
+      },
+      errorCodes: [
+        { code: 404, reason: 'Semester or academic year not found' },
+        { code: 503, reason: 'Database service unavailable' },
+      ],
+    },
+    {
+      method: 'GET',
+      path: '/api/academic-calendar/upcoming',
+      summary: 'Get upcoming & ongoing academic activities',
+      description: 'Returns scheduled activities occurring on or after a reference date (defaults to current date in Sri Lanka / Asia:Colombo). Each activity is dynamically classified as "ongoing", "upcoming", or "completed".',
+      params: [
+        { name: 'reference_date', in: 'query', type: 'string (YYYY-MM-DD)', required: false, description: 'Base date for upcoming filtering (defaults to today).' },
+        { name: 'limit', in: 'query', type: 'integer (1–50)', required: false, description: 'Maximum activities to return (default: 10).' },
+        { name: 'academicYear', in: 'query', type: 'string', required: false, description: 'Filter to specific academic year.' },
+      ],
+      curlExample: `# Upcoming activities from today
+curl -X GET "${LIVE_BASE_URL}/academic-calendar/upcoming?limit=5" \\
+  -H "Accept: application/json"
+
+# With explicit reference date
+curl -X GET "${LIVE_BASE_URL}/academic-calendar/upcoming?reference_date=2026-09-01" \\
+  -H "Accept: application/json"`,
+      exampleResponse: {
+        referenceDate: '2026-09-01',
+        academicYear: '2024/2025',
+        totalUpcoming: 13,
+        limit: 5,
+        activities: [
+          {
+            activity: 'Academic Session',
+            category: 'academic_session',
+            semester: 'Semester I',
+            startDate: '2026-08-03',
+            endDate: '2026-09-27',
+            durationRaw: '08 Weeks',
+            durationWeeks: 8.0,
+            status: 'ongoing',
+          },
+        ],
+      },
+      errorCodes: [
+        { code: 404, reason: 'No active calendar found' },
+        { code: 503, reason: 'Database service unavailable' },
+      ],
+    },
+    {
+      method: 'GET',
+      path: '/api/academic-calendar/status',
+      summary: 'Academic calendar synchronization health & audit metrics',
+      description: 'Provides operational insight into official source discovery, SHA-256 change detection, validation status, confirmation state, and run timestamps.',
+      params: [],
+      curlExample: `curl -X GET "${LIVE_BASE_URL}/academic-calendar/status" \\
+  -H "Accept: application/json"`,
+      exampleResponse: {
+        lastCheckedAt: '2026-10-20T12:00:00+05:30',
+        lastSuccessfulSyncAt: '2026-10-20T12:00:00+05:30',
+        sourcePageUrl: 'https://fas.wyb.ac.lk/timetables/academic-calendar/',
+        discoverySuccess: true,
+        newerDocumentDiscovered: false,
+        documentAwaitingValidation: false,
+        currentCalendarConfirmed: true,
+        currentCalendarId: 'cal_2024_2025_approved_6ca12081',
+        currentAcademicYear: '2024/2025',
+        lastRunFailed: false,
+        discoveredDocumentsCount: 6,
+        unchangedCount: 6,
+        synchronizedCount: 0,
+        failedCount: 0,
+        lastError: null,
+      },
+      errorCodes: [
+        { code: 503, reason: 'Database service unavailable' },
+      ],
+    },
   ];
 
   // ── Code Examples ─────────────────────────────────────────────────────────
@@ -678,6 +872,18 @@ async function fetchLevel2FridaySchedule() {
   return data;
 }
 
+// JavaScript — fetch Current Official Academic Calendar
+async function fetchCurrentAcademicCalendar() {
+  const response = await fetch(\`\${API_BASE}/academic-calendar/current\`, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(\`HTTP \${response.status}\`);
+  const calendar = await response.json();
+  console.log(\`Academic Calendar: \${calendar.academicYear} (\${calendar.documentStatus})\`);
+  console.log(\`Confirmed: \${calendar.isCurrentConfirmed ? 'YES' : 'UNCONFIRMED'}\`);
+  return calendar;
+}
+
 fetchLevel2FridaySchedule()
   .catch(err => console.error('API error:', err.message));`;
 
@@ -715,6 +921,16 @@ def get_level2_friday_sessions():
 
     return data
 
+def get_current_academic_calendar():
+    """Fetch current official academic calendar and upcoming activities."""
+    url = f"{API_BASE}/academic-calendar/current"
+    res = requests.get(url, timeout=10)
+    res.raise_for_status()
+    cal = res.json()
+    print(f"Academic Calendar: {cal['academicYear']} ({cal['documentStatus']})")
+    print(f"Confirmation: {'CONFIRMED' if cal['isCurrentConfirmed'] else 'UNCONFIRMED'}")
+    return cal
+
 if __name__ == '__main__':
     get_level2_friday_sessions()`;
 
@@ -737,7 +953,16 @@ curl -X GET "${LIVE_BASE_URL}/timetables/2/sessions?day=Friday" -H "Accept: appl
 curl -X GET "${LIVE_BASE_URL}/timetables/1/sessions?subjectCode=CMIS" -H "Accept: application/json"
 
 # Level 1 session validation status
-curl -X GET "${LIVE_BASE_URL}/timetables/1/status" -H "Accept: application/json"`;
+curl -X GET "${LIVE_BASE_URL}/timetables/1/status" -H "Accept: application/json"
+
+# Academic Calendar: Current official calendar
+curl -X GET "${LIVE_BASE_URL}/academic-calendar/current" -H "Accept: application/json"
+
+# Academic Calendar: Upcoming & ongoing activities
+curl -X GET "${LIVE_BASE_URL}/academic-calendar/upcoming?limit=5" -H "Accept: application/json"
+
+# Academic Calendar: Synchronization audit status
+curl -X GET "${LIVE_BASE_URL}/academic-calendar/status" -H "Accept: application/json"`;
 
   // ── Session field schema ─────────────────────────────────────────────────
   const sessionFields = [
@@ -1007,8 +1232,32 @@ curl -X GET "${LIVE_BASE_URL}/timetables/1/status" -H "Accept: application/json"
                   </button>
                 </div>
                 <p className="text-xs text-slate-500 mt-2">
-                  Verified live production API: <code className="font-mono text-brand-700">{LIVE_BASE_URL}</code>. All 4 endpoints active.
+                  Verified live production API: <code className="font-mono text-brand-700">{LIVE_BASE_URL}</code>. Timetable & Academic Calendar endpoints active.
                 </p>
+              </div>
+
+              {/* Academic Calendar Integration Highlights */}
+              <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-brand-600" />
+                  Academic Calendar Synchronization & Selection Architecture
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-600">
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                    <p className="font-semibold text-slate-900">Source Discovery & Hashing</p>
+                    <p>
+                      Automated workers monitor <code>https://fas.wyb.ac.lk/timetables/academic-calendar/</code>.
+                      Each candidate PDF is hashed with SHA-256. Unchanged documents are skipped; new or changed documents are parsed and validated before MongoDB Atlas updates.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                    <p className="font-semibold text-slate-900">Selection Policy & Confirmation</p>
+                    <p>
+                      The current calendar is selected using verified official academic year labels (e.g. <code>2024/2025</code>)
+                      and status hierarchy (Revised &gt; Approved &gt; Draft). If conflicting documents exist without clear authority, current selection is explicitly marked <code>isCurrentConfirmed: false</code>.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </section>

@@ -63,3 +63,81 @@ export async function getLevelStatus(level, academicYear, semester) {
   if (!res.ok) throw new Error(`Failed to load level status (${res.status})`);
   return res.json();
 }
+
+/**
+ * Fetch all available academic calendar records
+ * @param {Object} [filters]
+ * @param {string} [filters.academicYear]
+ * @param {string} [filters.status]
+ */
+export async function getAcademicCalendars(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.academicYear) params.append('academicYear', filters.academicYear);
+  if (filters.status) params.append('status', filters.status);
+
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`${API_BASE}/api/academic-calendar${query}`);
+  if (!res.ok) throw new Error(`Failed to load academic calendars (${res.status})`);
+  return res.json();
+}
+
+/**
+ * Fetch authoritative current academic calendar
+ */
+export async function getCurrentAcademicCalendar() {
+  const res = await fetch(`${API_BASE}/api/academic-calendar/current`);
+  if (!res.ok) throw new Error(`Failed to load current academic calendar (${res.status})`);
+  return res.json();
+}
+
+/**
+ * Fetch calendar by academic year
+ * @param {string} academicYear
+ */
+export async function getAcademicCalendarByYear(academicYear) {
+  const encoded = encodeURIComponent(academicYear);
+  const res = await fetch(`${API_BASE}/api/academic-calendar/${encoded}`);
+  if (!res.ok) throw new Error(`Failed to load academic calendar for year ${academicYear} (${res.status})`);
+  return res.json();
+}
+
+/**
+ * Fetch semester details for an academic year
+ * @param {string} academicYear
+ * @param {string} semester
+ */
+export async function getAcademicCalendarSemester(academicYear, semester) {
+  const encYear = encodeURIComponent(academicYear);
+  const encSem = encodeURIComponent(semester);
+  const res = await fetch(`${API_BASE}/api/academic-calendar/${encYear}/semesters/${encSem}`);
+  if (!res.ok) throw new Error(`Failed to load calendar semester (${res.status})`);
+  return res.json();
+}
+
+/**
+ * Fetch upcoming scheduled activities
+ * @param {Object} [options]
+ * @param {string} [options.referenceDate]
+ * @param {number} [options.limit]
+ * @param {string} [options.academicYear]
+ */
+export async function getUpcomingActivities(options = {}) {
+  const params = new URLSearchParams();
+  if (options.referenceDate) params.append('reference_date', options.referenceDate);
+  if (options.limit) params.append('limit', options.limit.toString());
+  if (options.academicYear) params.append('academicYear', options.academicYear);
+
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`${API_BASE}/api/academic-calendar/upcoming${query}`);
+  if (!res.ok) throw new Error(`Failed to load upcoming activities (${res.status})`);
+  return res.json();
+}
+
+/**
+ * Fetch academic calendar synchronization status
+ */
+export async function getAcademicCalendarStatus() {
+  const res = await fetch(`${API_BASE}/api/academic-calendar/status`);
+  if (!res.ok) throw new Error(`Failed to load calendar status (${res.status})`);
+  return res.json();
+}

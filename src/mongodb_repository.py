@@ -13,10 +13,14 @@ from .config import (
     DEFAULT_MONGODB_DATABASE,
     DEFAULT_MONGODB_COLLECTION,
     DEFAULT_SESSIONS_COLLECTION,
+    DEFAULT_CALENDARS_COLLECTION,
+    DEFAULT_CALENDAR_STATUS_COLLECTION,
+    DEFAULT_CALENDAR_BASE_URL,
     MONGODB_TIMEOUT_MS,
 )
 from .models import ManifestEntry
 from .parser_models import ParsedTimetable, TimetableSession
+from .calendar_models import AcademicCalendarRecord, CalendarValidationStatus
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +70,8 @@ class MongoTimetableRepository:
             self.db: Database = self.client[self.database_name]
             self.collection: Collection = self.db[self.collection_name]
             self.sessions_collection: Collection = self.db[self.sessions_collection_name]
+            self.calendars_collection: Collection = self.db[DEFAULT_CALENDARS_COLLECTION]
+            self.calendar_status_collection: Collection = self.db[DEFAULT_CALENDAR_STATUS_COLLECTION]
         except Exception as exc:
             logger.error("Failed to access MongoDB database/collection: %s", type(exc).__name__)
             raise MongoRepositoryError(f"Database access failed: {type(exc).__name__}") from None
@@ -576,6 +582,206 @@ class MongoTimetableRepository:
         except Exception as exc:
             logger.error("Error retrieving status for Level %d: %s", level, type(exc).__name__)
             raise MongoRepositoryError(f"Failed to query level status: {type(exc).__name__}") from None
+
+    # =========================================================================
+    # Academic Calendar Operations
+    # =========================================================================
+
+    def ensure_calendar_indexes(self) -> Dict[str, str]:
+        """Create indexes on academic_calendars collection."""
+        index_names: Dict[str, str] = {}
+        try:
+            if hasattr(self, "calendars_collection") and self.calendars_collection is not None:
+                cal_idx = self.calendars_collection.create_index(
+                    [("calendarId", pymongo.ASCENDING)],
+                    unique=True,
+                    name="idx_calendar_id",
+                )
+                index_names["academic_calendars"] = cal_idx
+                self.calendars_collection.create_index(
+                    [("academicYear", pymongo.ASCENDING)],
+                    name="idx_calendar_academic_year",
+                )
+                self.calendars_collection.create_index(
+                    [("isCurrent", pymongo.ASCENDING)],
+                    name="idx_calendar_is_current",
+                )
+            return index_names
+        except Exception as exc:
+            logger.error("Failed to create calendar index: %s", type(exc).__name__)
+            return {}
+
+    def get_academic_calendars(
+        self,
+        academic_year: Optional[str] = None,
+        is_current: Optional[bool] = None,
+    ) -> List[Dict[str, Any]]:
+        """List academic calendars with optional filters."""
+        query: Dict[str, Any] = {}
+        if academic_year:
+            query["academicYear"] = academic_year.replace("-", "/")
+        if is_current is not None:
+            query["isCurrent"] = is_current
+
+        try:
+            cursor = self.calendars_collection.find(query).sort([
+                ("academicYearStart", pymongo.DESCENDING),
+                ("revisionRank", pymongo.DESCENDING),
+            ])
+            results = []
+            for doc in cursor:
+                doc["id"] = str(doc.get("_id"))
+                del doc["_id"]
+                results.append(doc)
+            return results
+        except Exception as exc:
+            logger.error("Failed to query academic calendars: %s", type(exc).__name__)
+            raise MongoRepositoryError(f"Failed to query academic calendars: {type(exc).__name__}") from None
+
+    def get_current_academic_calendar(self) -> Optional[Dict[str, Any]]:
+        """Retrieve the active current academic calendar document."""
+        try:
+            doc = self.calendars_collection.find_one({"isCurrent": True})
+            if not doc:
+                doc = self.calendars_collection.find_one(
+                    {"validationStatus": {"$ne": CalendarValidationStatus.INVALID.value}},
+                    sort=[("academicYearStart", pymongo.DESCENDING), ("revisionRank", pymongo.DESCENDING)],
+                )
+            if doc:
+                doc["id"] = str(doc.get("_id"))
+                del doc["_id"]
+                return doc
+            return None
+        except Exception as exc:
+            logger.error("Failed to query current academic calendar: %s", type(exc).__name__)
+            raise MongoRepositoryError(f"Failed to query current academic calendar: {type(exc).__name__}") from None
+
+    def get_academic_calendar_by_year(self, academic_year: str) -> Optional[Dict[str, Any]]:
+        """Retrieve primary academic calendar record for an academic year."""
+        normalized_year = academic_year.replace("-", "/")
+        try:
+            doc = self.calendars_collection.find_one(
+                {"academicYear": normalized_year},
+                sort=[("revisionRank", pymongo.DESCENDING), ("lastValidatedAt", pymongo.DESCENDING)],
+            )
+            if doc:
+                doc["id"] = str(doc.get("_id"))
+                del doc["_id"]
+                return doc
+            return None
+        except Exception as exc:
+            logger.error("Failed to query academic calendar for year %s: %s", academic_year, type(exc).__name__)
+            raise MongoRepositoryError(f"Failed to query calendar for year: {type(exc).__name__}") from None
+
+    def upsert_academic_calendar(
+        self,
+        record: AcademicCalendarRecord,
+        is_current: bool = False,
+        is_confirmed: bool = False,
+        selection_reason: str = "",
+    ) -> Dict[str, Any]:
+        """Upsert academic calendar record with SHA-256 change detection and revision history preservation."""
+        self.ensure_calendar_indexes()
+        now_iso = datetime.now(timezone.utc).astimezone().isoformat()
+        filter_query = {"calendarId": record.calendarId}
+
+        doc = record.model_dump()
+        doc["isCurrent"] = is_current
+        doc["isCurrentConfirmed"] = is_confirmed
+        doc["selectionReason"] = selection_reason
+        doc["updatedAt"] = now_iso
+
+        try:
+            existing = self.calendars_collection.find_one(filter_query)
+            if existing:
+                if existing.get("sha256") == record.sha256 and existing.get("validationStatus") == record.validationStatus.value:
+                    self.calendars_collection.update_one(
+                        filter_query,
+                        {
+                            "$set": {
+                                "lastSeenAt": now_iso,
+                                "isCurrent": is_current,
+                                "isCurrentConfirmed": is_confirmed,
+                                "selectionReason": selection_reason,
+                                "updatedAt": now_iso,
+                            }
+                        },
+                    )
+                    action = "skipped"
+                else:
+                    old_history = existing.get("revisionHistory", [])
+                    old_history.append({
+                        "sha256": existing.get("sha256"),
+                        "documentTitle": existing.get("documentTitle"),
+                        "documentStatus": existing.get("documentStatus"),
+                        "publicationDate": existing.get("publicationDate"),
+                        "signatureDate": existing.get("signatureDate"),
+                        "sourceUrl": existing.get("sourceUrl"),
+                        "recordedAt": existing.get("updatedAt", now_iso),
+                    })
+                    doc["revisionHistory"] = old_history
+                    doc["firstSeenAt"] = existing.get("firstSeenAt", now_iso)
+                    self.calendars_collection.update_one(filter_query, {"$set": doc})
+                    action = "updated"
+            else:
+                self.calendars_collection.update_one(filter_query, {"$set": doc}, upsert=True)
+                action = "upserted"
+
+            if is_current:
+                self.calendars_collection.update_many(
+                    {"calendarId": {"$ne": record.calendarId}},
+                    {"$set": {"isCurrent": False}},
+                )
+
+            return {"action": action, "calendarId": record.calendarId}
+        except Exception as exc:
+            logger.error("Failed to upsert academic calendar %s: %s", record.calendarId, type(exc).__name__)
+            raise MongoRepositoryError(f"Failed to upsert academic calendar: {type(exc).__name__}") from None
+
+    def get_calendar_sync_status(self) -> Dict[str, Any]:
+        """Retrieve academic calendar synchronization status."""
+        try:
+            doc = self.calendar_status_collection.find_one({"_id": "global_calendar_status"})
+            if doc:
+                doc["id"] = str(doc.get("_id"))
+                del doc["_id"]
+                return doc
+            now_iso = datetime.now(timezone.utc).astimezone().isoformat()
+            return {
+                "lastCheckedAt": now_iso,
+                "lastSuccessfulSyncAt": None,
+                "sourcePageUrl": DEFAULT_CALENDAR_BASE_URL,
+                "discoverySuccess": False,
+                "newerDocumentDiscovered": False,
+                "documentAwaitingValidation": False,
+                "currentCalendarConfirmed": False,
+                "currentCalendarId": None,
+                "currentAcademicYear": None,
+                "lastRunFailed": False,
+                "discoveredDocumentsCount": 0,
+                "unchangedCount": 0,
+                "synchronizedCount": 0,
+                "failedCount": 0,
+                "lastError": None,
+                "updatedAt": now_iso,
+            }
+        except Exception as exc:
+            logger.error("Failed to query calendar sync status: %s", type(exc).__name__)
+            raise MongoRepositoryError(f"Failed to query calendar sync status: {type(exc).__name__}") from None
+
+    def update_calendar_sync_status(self, status_data: Dict[str, Any]) -> None:
+        """Update academic calendar synchronization status record."""
+        now_iso = datetime.now(timezone.utc).astimezone().isoformat()
+        status_data["updatedAt"] = now_iso
+        try:
+            self.calendar_status_collection.update_one(
+                {"_id": "global_calendar_status"},
+                {"$set": status_data},
+                upsert=True,
+            )
+        except Exception as exc:
+            logger.error("Failed to update calendar sync status: %s", type(exc).__name__)
+            raise MongoRepositoryError(f"Failed to update calendar sync status: {type(exc).__name__}") from None
 
     def close(self):
         """Cleanly close the MongoDB connection."""

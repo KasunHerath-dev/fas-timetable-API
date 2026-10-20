@@ -1,4 +1,4 @@
-# FAS WUSL Timetable Downloader & Parser
+# FAS WUSL Timetable API & Parser
 
 A lightweight Python tool that automatically discovers and downloads the latest valid academic timetables for Levels 1, 2, 3, and 4 from the Faculty of Applied Sciences, Wayamba University of Sri Lanka ([FAS WUSL Timetables](https://fas.wyb.ac.lk/timetables/)), parses the PDF timetable grids into structured JSON sessions, tracks download metadata in a local manifest, and synchronizes timetable metadata with MongoDB Atlas.
 
@@ -23,6 +23,13 @@ A lightweight Python tool that automatically discovers and downloads the latest 
 - **Interactive In-App README Viewer (`/readme`)**: Synchronized build-time Markdown reader with Table of Contents navigation, search filter, copyable code blocks, and maintainer credits.
 - **Public Developer REST API Reference (`/developers`)**: Comprehensive API documentation with copyable canonical Base URL, query parameter dictionary, and runnable code snippets in JavaScript, Python, and cURL.
 - **Flexible CLI Options**: Supports `--worker` for production runs, `--dry-run` to preview selections, `--parse-only` to parse existing PDFs without downloading, and `--skip-mongodb` to run without database connectivity.
+- **Academic Calendar Synchronization & Selection (`/academic-calendar`)**:
+  - Automatically monitors official [FAS Academic Calendars](https://fas.wyb.ac.lk/timetables/academic-calendar/) for new or revised Calendar of Dates documents.
+  - Supports both native digital and scanned PDFs via automatic high-resolution OCR fallback.
+  - Deterministic selection policy: prioritizes authoritative academic periods, verifies revision ranks (Revised &gt; Approved &gt; Draft), and flags unconfirmed selections when evidence is ambiguous.
+  - SHA-256 digest validation, atomic MongoDB persistence, and historical revision tracking.
+  - 6 dedicated REST endpoints: `/api/academic-calendar`, `/api/academic-calendar/current`, `/api/academic-calendar/{academic_year}`, `/api/academic-calendar/{academic_year}/semesters/{semester}`, `/api/academic-calendar/upcoming`, and `/api/academic-calendar/status`.
+  - Dedicated CLI worker: `python calendar_worker.py [--dry-run] [--force]`.
 - **Maintainer**: Created and maintained by [Kasun Herath](https://github.com/KasunHerath-dev) • Open source under the MIT License.
 
 ---

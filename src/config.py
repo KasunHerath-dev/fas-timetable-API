@@ -24,4 +24,10 @@ REQUEST_TIMEOUT = 30
 DEFAULT_MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "fas_timetable")
 DEFAULT_MONGODB_COLLECTION = "timetables"
 DEFAULT_SESSIONS_COLLECTION = "timetable_sessions"
+DEFAULT_CALENDARS_COLLECTION = "academic_calendars"
+DEFAULT_CALENDAR_STATUS_COLLECTION = "calendar_sync_status"
 MONGODB_TIMEOUT_MS = 5000
+
+# Academic Calendar Defaults
+DEFAULT_CALENDAR_BASE_URL = "https://fas.wyb.ac.lk/timetables/academic-calendar/"
+CALENDAR_PARSER_VERSION = "1.0.0"

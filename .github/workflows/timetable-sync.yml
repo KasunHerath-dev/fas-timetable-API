@@ -60,3 +60,17 @@ jobs:
             ARGS="$ARGS --dry-run"
           fi
           python -m src.worker $ARGS
+
+      - name: Execute Academic Calendar Production Worker
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DATABASE: ${{ vars.MONGODB_DATABASE || 'fas_timetable' }}
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python -m src.calendar_worker $ARGS

@@ -7,6 +7,7 @@ import DailyView from './components/DailyView';
 import SessionModal from './components/SessionModal';
 import DeveloperDocs from './components/DeveloperDocs';
 import ReadmeViewer from './components/ReadmeViewer';
+import AcademicCalendarViewer from './components/AcademicCalendarViewer';
 import { getHealthStatus, getTimetables, getSessions, getLevelStatus } from './services/api';
 import { AlertCircle, RefreshCw, Calendar, Search } from 'lucide-react';
 
@@ -91,7 +92,9 @@ export default function App() {
       currentPath === '/developers' ||
       currentPath.startsWith('/developers') ||
       currentPath === '/readme' ||
-      currentPath.startsWith('/readme')
+      currentPath.startsWith('/readme') ||
+      currentPath === '/academic-calendar' ||
+      currentPath.startsWith('/academic-calendar')
     ) {
       return;
     }
@@ -136,7 +139,9 @@ export default function App() {
       currentPath === '/developers' ||
       currentPath.startsWith('/developers') ||
       currentPath === '/readme' ||
-      currentPath.startsWith('/readme')
+      currentPath.startsWith('/readme') ||
+      currentPath === '/academic-calendar' ||
+      currentPath.startsWith('/academic-calendar')
     ) {
       return;
     }
@@ -216,6 +221,18 @@ export default function App() {
       <DeveloperDocs
         onNavigateHome={() => navigateTo('/')}
         onNavigateToReadme={() => navigateTo('/readme')}
+        onNavigateToAcademicCalendar={() => navigateTo('/academic-calendar')}
+      />
+    );
+  }
+
+  // Route switch: Academic Calendar Explorer
+  if (currentPath === '/academic-calendar' || currentPath.startsWith('/academic-calendar')) {
+    return (
+      <AcademicCalendarViewer
+        onNavigateHome={() => navigateTo('/')}
+        onNavigateToDevelopers={() => navigateTo('/developers')}
+        onNavigateToReadme={() => navigateTo('/readme')}
       />
     );
   }
@@ -229,6 +246,8 @@ export default function App() {
         loading={loading}
         onNavigateToDevelopers={() => navigateTo('/developers')}
         onNavigateToReadme={() => navigateTo('/readme')}
+        onNavigateToAcademicCalendar={() => navigateTo('/academic-calendar')}
+        currentPath={currentPath}
       />
 
       {/* Main Content Area */}
