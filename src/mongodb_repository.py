@@ -626,6 +626,7 @@ class MongoTimetableRepository:
         try:
             cursor = self.calendars_collection.find(query).sort([
                 ("academicYearStart", pymongo.DESCENDING),
+                ("publicationDate", pymongo.DESCENDING),
                 ("revisionRank", pymongo.DESCENDING),
             ])
             results = []
@@ -645,7 +646,11 @@ class MongoTimetableRepository:
             if not doc:
                 doc = self.calendars_collection.find_one(
                     {"validationStatus": {"$ne": CalendarValidationStatus.INVALID.value}},
-                    sort=[("academicYearStart", pymongo.DESCENDING), ("revisionRank", pymongo.DESCENDING)],
+                    sort=[
+                        ("academicYearStart", pymongo.DESCENDING),
+                        ("publicationDate", pymongo.DESCENDING),
+                        ("revisionRank", pymongo.DESCENDING),
+                    ],
                 )
             if doc:
                 doc["id"] = str(doc.get("_id"))

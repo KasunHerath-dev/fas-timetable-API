@@ -140,25 +140,50 @@ class AcademicCalendarParser:
         end_year = int(ay_match.group(2))
         academic_year = f"{start_year}/{end_year}"
 
-        # 2. Document Title & Status
+        # 2. Signature / Approval Date
+        signature_date: Optional[str] = None
+        for page_text in reversed(pages_text):
+            lines = [l.strip() for l in page_text.splitlines() if l.strip()]
+            for l in reversed(lines[-8:]):
+                iso_d = parse_date_to_iso(l)
+                if iso_d:
+                    signature_date = iso_d
+                    break
+            if signature_date:
+                break
+
+        # 3. Document Title & Status
         first_page = pages_text[0].upper()
-        if "DRAFT" in first_page:
+        combined_upper = full_combined_text.upper()
+        notice_upper = (notice_title or "").upper()
+
+        if "DRAFT" in first_page or "DRAFT" in notice_upper:
             doc_status = CalendarStatus.DRAFT
             doc_title = "DRAFT CALENDAR OF DATES"
             revision = "Draft"
             revision_rank = 1
-        elif "REVISED" in first_page:
+        elif "REVISED" in first_page or "REVISED" in notice_upper:
             doc_status = CalendarStatus.REVISED
             doc_title = "REVISED CALENDAR OF DATES"
             revision = "Revised"
             revision_rank = 3
-        else:
+        elif (
+            "APPROVED" in combined_upper
+            or "APPROVED" in notice_upper
+            or any(s in combined_upper for s in ["DEPUTY REGISTRAR", "SENIOR ASSISTANT REGISTRAR", "REGISTRAR", "FACULTY BOARD", "SENATE"])
+            or signature_date is not None
+        ):
             doc_status = CalendarStatus.APPROVED
             doc_title = "CALENDAR OF DATES"
             revision = "Original"
             revision_rank = 2
+        else:
+            doc_status = CalendarStatus.UNKNOWN
+            doc_title = "CALENDAR OF DATES"
+            revision = "Unknown"
+            revision_rank = 0
 
-        # 3. Levels covered
+        # 4. Levels covered
         levels_set = set()
         for page_text in pages_text:
             lvl_m = re.search(r"LEVEL\s*([0-9,\s&]+)", page_text, re.IGNORECASE)
@@ -169,19 +194,6 @@ class AcademicCalendarParser:
                     if 1 <= val <= 4:
                         levels_set.add(val)
         levels = sorted(list(levels_set)) if levels_set else [1, 2, 3, 4]
-
-        # 4. Signature / Approval Date
-        signature_date: Optional[str] = None
-        for page_text in reversed(pages_text):
-            # Look for date near Deputy Registrar or signature lines at the end
-            lines = [l.strip() for l in page_text.splitlines() if l.strip()]
-            for l in reversed(lines[-8:]):
-                iso_d = parse_date_to_iso(l)
-                if iso_d:
-                    signature_date = iso_d
-                    break
-            if signature_date:
-                break
 
         # 5. Activities and Semesters
         activities: List[CalendarActivity] = []

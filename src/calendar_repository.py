@@ -95,7 +95,11 @@ class MongoCalendarRepository:
         if is_current is not None:
             query["isCurrent"] = is_current
 
-        cursor = self.collection.find(query).sort([("academicYearStart", pymongo.DESCENDING), ("revisionRank", pymongo.DESCENDING)])
+        cursor = self.collection.find(query).sort([
+            ("academicYearStart", pymongo.DESCENDING),
+            ("publicationDate", pymongo.DESCENDING),
+            ("revisionRank", pymongo.DESCENDING),
+        ])
         results = []
         for doc in cursor:
             doc["id"] = str(doc.get("_id"))
@@ -110,7 +114,11 @@ class MongoCalendarRepository:
             # Fallback: get calendar with highest academicYearStart and highest revisionRank
             doc = self.collection.find_one(
                 {"validationStatus": {"$ne": CalendarValidationStatus.INVALID.value}},
-                sort=[("academicYearStart", pymongo.DESCENDING), ("revisionRank", pymongo.DESCENDING)],
+                sort=[
+                    ("academicYearStart", pymongo.DESCENDING),
+                    ("publicationDate", pymongo.DESCENDING),
+                    ("revisionRank", pymongo.DESCENDING),
+                ],
             )
         if doc:
             doc["id"] = str(doc.get("_id"))

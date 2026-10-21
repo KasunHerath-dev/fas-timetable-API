@@ -191,6 +191,44 @@ class CalendarProductionWorker:
                     parsed_records.append(record)
 
             # 5. Deterministic Current Calendar Selection
+            latest_discovered_link = discovered_links[0] if discovered_links else None
+            latest_discovered_failed = any(
+                latest_discovered_link and (latest_discovered_link.pdfUrl in f or latest_discovered_link.noticeTitle in f)
+                for f in failed_docs
+            )
+
+            if latest_discovered_failed:
+                err_msg = (
+                    f"Latest discovered academic calendar notice '{latest_discovered_link.noticeTitle}' "
+                    f"failed validation or download ({latest_discovered_link.pdfUrl}). "
+                    f"Preserving existing database data."
+                )
+                logger.error(err_msg)
+                if not self.dry_run:
+                    repo.update_sync_status({
+                        "lastCheckedAt": now_iso,
+                        "sourcePageUrl": self.base_url,
+                        "discoverySuccess": True,
+                        "newerDocumentDiscovered": True,
+                        "documentAwaitingValidation": True,
+                        "lastRunFailed": True,
+                        "lastError": err_msg,
+                        "discoveredDocumentsCount": len(discovered_links),
+                        "unchangedCount": len(unchanged_docs),
+                        "synchronizedCount": len(synchronized_docs),
+                        "failedCount": len(failed_docs),
+                    })
+                self._print_summary(
+                    discovered=[l.pdfUrl for l in discovered_links],
+                    unchanged=unchanged_docs,
+                    synchronized=synchronized_docs,
+                    failed=failed_docs,
+                    current_record=None,
+                    is_confirmed=False,
+                    selection_reason=err_msg,
+                )
+                return 1
+
             selected_record, is_confirmed, selection_reason = CalendarSelector.select_current_calendar(parsed_records)
 
             if selected_record:

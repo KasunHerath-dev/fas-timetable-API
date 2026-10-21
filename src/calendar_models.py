@@ -11,6 +11,7 @@ class CalendarStatus(str, Enum):
     DRAFT = "draft"
     REVISED = "revised"
     APPROVED = "approved"
+    UNKNOWN = "unknown"
 
 
 class ActivityCategory(str, Enum):
