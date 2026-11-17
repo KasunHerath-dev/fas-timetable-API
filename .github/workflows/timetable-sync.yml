@@ -42,6 +42,15 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
+      - name: Install OCR engine (scanned academic calendars)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-eng
+          # PyMuPDF's get_textpage_ocr needs to know where the language data lives
+          TESSDATA_DIR=$(dirname "$(find /usr/share/tesseract-ocr -name 'eng.traineddata' | head -1)")
+          echo "TESSDATA_PREFIX=$TESSDATA_DIR" >> "$GITHUB_ENV"
+          tesseract --version | head -1
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
