@@ -120,8 +120,8 @@ class TestTimetableParser(unittest.TestCase):
         self.assertEqual(session.start_time, "12:30")
         self.assertEqual(session.end_time, "14:30")
 
-    def test_ambiguous_data_review_flagging(self):
-        chunk = "ELTN 4+92\nSeminar Room ELTN"
+    def test_year_long_plus_code_is_not_flagged(self):
+        chunk = "ELTN 4+92 (L)\nSeminar Room ELTN"
         session = parse_session_chunk(
             chunk=chunk,
             raw_cell=chunk,
@@ -129,8 +129,48 @@ class TestTimetableParser(unittest.TestCase):
             default_start="13:30",
             default_end="14:30",
         )
-        self.assertEqual(session.validation_status, ValidationStatus.NEEDS_REVIEW)
-        self.assertTrue(any("Unusual character" in w for w in session.warnings))
+        self.assertEqual(session.subject_code, "ELTN 4+92")
+        self.assertEqual(session.validation_status, ValidationStatus.VALID)
+        self.assertEqual(session.warnings, [])
+
+    def test_elpc_english_course_without_type_is_not_flagged(self):
+        for code in ("ELPC 1+10", "ELPC 2+20", "ELPC 1ᵻ10"):
+            chunk = f"{code}\nMini Auditorium"
+            session = parse_session_chunk(
+                chunk=chunk,
+                raw_cell=chunk,
+                day="Thursday",
+                default_start="10:30",
+                default_end="11:30",
+            )
+            self.assertEqual(session.subject_code, code)
+            self.assertIsNone(session.session_type)
+            self.assertEqual(session.validation_status, ValidationStatus.VALID, code)
+            self.assertEqual(session.warnings, [], code)
+
+    def test_year_long_lab_and_project_codes_without_type_are_not_flagged(self):
+        for chunk in ("ELTN 4+92\nSeminar Room ELTN", "ELTN 4+78\nELTN Lab", "IMGT 4+06", "IMGT 3ᵻ34\nLR- 05"):
+            session = parse_session_chunk(
+                chunk=chunk,
+                raw_cell=chunk,
+                day="Wednesday",
+                default_start="13:30",
+                default_end="16:30",
+            )
+            self.assertEqual(session.validation_status, ValidationStatus.VALID, chunk)
+            self.assertEqual(session.warnings, [], chunk)
+
+    def test_business_english_without_space_keeps_subject(self):
+        chunk = "BusinessEnglish\nMini Auditorium"
+        session = parse_session_chunk(
+            chunk=chunk,
+            raw_cell=chunk,
+            day="Tuesday",
+            default_start="08:30",
+            default_end="10:30",
+        )
+        self.assertEqual(session.subject_code, "BusinessEnglish")
+        self.assertEqual(session.validation_status, ValidationStatus.VALID)
 
     def test_eltn_lab_location_extraction(self):
         chunk = "ELTN 2112 (P)\nELTN Lab"
@@ -160,7 +200,7 @@ class TestTimetableParser(unittest.TestCase):
         self.assertEqual(session.validation_status, ValidationStatus.NEEDS_REVIEW)
         self.assertTrue(any("Missing session type" in w for w in session.warnings))
 
-    def test_mis_4142_prefix_marked_needs_review(self):
+    def test_mis_4142_prefix_not_flagged(self):
         chunk = "MIS 4142 (L)\nLR- 08"
         session = parse_session_chunk(
             chunk=chunk,
@@ -169,11 +209,12 @@ class TestTimetableParser(unittest.TestCase):
             default_start="08:30",
             default_end="09:30",
         )
+        # kept as printed (consumers derive session IDs from it); not a review issue
         self.assertEqual(session.subject_code, "MIS 4142")
         self.assertEqual(session.session_type, "Lecture")
         self.assertEqual(session.location, "LR- 08")
-        self.assertEqual(session.validation_status, ValidationStatus.NEEDS_REVIEW)
-        self.assertTrue(any("prefix" in w for w in session.warnings))
+        self.assertEqual(session.validation_status, ValidationStatus.VALID)
+        self.assertEqual(session.warnings, [])
 
     def test_dagger_honours_course_preserved(self):
         chunk = "IMGT 3ᵻ34 (L)\nLR- 07"
@@ -185,8 +226,8 @@ class TestTimetableParser(unittest.TestCase):
             default_end="12:30",
         )
         self.assertEqual(session.subject_code, "IMGT 3ᵻ34")
-        self.assertEqual(session.validation_status, ValidationStatus.NEEDS_REVIEW)
-        self.assertTrue(any("Unusual character" in w for w in session.warnings))
+        self.assertEqual(session.validation_status, ValidationStatus.VALID)
+        self.assertEqual(session.warnings, [])
 
     def test_parse_live_pdf_level1(self):
         pdf_path = Path("downloads/level-1_2026-10-05.pdf")
@@ -213,7 +254,7 @@ class TestTimetableParser(unittest.TestCase):
         self.assertNotIn("Mr. WCC Premarathne", subject_codes)
         self.assertNotIn("Demonstrators", subject_codes)
 
-    def test_parse_live_pdf_level4_lunch_and_reviews(self):
+    def test_parse_live_pdf_level4_lunch_and_no_reviews(self):
         pdf_path = Path("downloads/level-4_2026-09-10.pdf")
         if not pdf_path.exists():
             self.skipTest("downloads/level-4_2026-09-10.pdf not present")
@@ -228,7 +269,8 @@ class TestTimetableParser(unittest.TestCase):
             self.assertNotIn(s.subject_code, ["L", "U", "N", "C", "H", "LUNCH"])
 
         # Verify records needing review are flagged
-        self.assertGreater(parsed.records_needing_review, 0)
+        # Year-long labs/projects (ELTN 4+92, IMGT 4+06) print no type and are not review issues.
+        self.assertEqual(parsed.records_needing_review, 0)
 
     def test_json_export_and_load(self):
         temp_dir = tempfile.TemporaryDirectory()

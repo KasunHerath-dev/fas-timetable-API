@@ -1,6 +1,8 @@
 requests>=2.28.0
 beautifulsoup4>=4.11.0
-pymupdf>=1.22.0
+# PyMuPDF 2.x drops the spaces inside timetable text ("CMIS1113", "MiniAuditorium"),
+# which breaks subject codes and room names; stay on 1.x.
+pymupdf>=1.22.0,<2.0
 python-dotenv>=1.0.0
 pymongo>=4.6.0
 dnspython>=2.0.0

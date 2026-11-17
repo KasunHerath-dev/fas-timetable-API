@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Subject anchor pattern matching department code + number or known titles
 SUBJECT_PATTERN = re.compile(
-    r"(?<![A-Za-z0-9])(?:([A-Z]{3,5}\s*[0-9+ᵻ]{3,5})|Business\s+English|Orientation)\b",
+    r"(?<![A-Za-z0-9])(?:([A-Z]{3,5}\s*[0-9+ᵻ]{3,5})|Business\s*English|Orientation)\b",
     re.IGNORECASE,
 )
 
@@ -97,6 +97,23 @@ def is_lunch_cell(text: Optional[str]) -> bool:
     return bool(re.match(r"^(?:L|U|N|C|H|LUNCH|L\s*U\s*N\s*C\s*H)$", c, re.IGNORECASE))
 
 
+# Courses printed without a session type marker in the timetable: named courses,
+# English courses (ELPC) and year-long modules ('+'/'ᵻ' in the semester digit:
+# labs, seminars and research projects such as ELTN 4+92, IMGT 4+06).
+TYPE_OPTIONAL_NAMES = {"orientation", "businessenglish"}
+TYPE_OPTIONAL_PREFIXES = ("ELPC",)
+YEAR_LONG_CODE = re.compile(r"^[A-Z]{3,5}\s*[1-4][+ᵻ†]\d{2}$", re.IGNORECASE)
+
+
+def _type_optional(subject_code: str) -> bool:
+    code = subject_code.strip()
+    return (
+        re.sub(r"\s+", "", code.lower()) in TYPE_OPTIONAL_NAMES
+        or code.upper().startswith(TYPE_OPTIONAL_PREFIXES)
+        or bool(YEAR_LONG_CODE.match(code))
+    )
+
+
 def split_cell_text(cell_text: str) -> List[str]:
     """Split multi-session cell text into individual session text chunks."""
     clean = cell_text.strip()
@@ -164,17 +181,17 @@ def parse_session_chunk(
         end_time = custom_end
 
     # 6. Validation status
+    # These are NOT review issues (see the module tracker, docs/module-code-review.md):
+    # - '+' / 'ᵻ' in the semester digit is how the PDF prints year-long modules
+    #   (the prospectus dagger), e.g. ELPC 1+10, IMGT 3+34, IMGT 3ᵻ34.
+    # - 'MIS 4142' is CMIS 4142 with the leading 'C' lost in text extraction.
+    # - English courses (ELPC) and named courses print no (L)/(T)/(P).
+    # subject_code is kept exactly as printed: consumers build stable session IDs from it.
     status = ValidationStatus.VALID
     if not subject_code:
         status = ValidationStatus.NEEDS_REVIEW
         warnings.append("Missing subject code in session chunk")
-    elif "+" in subject_code or "ᵻ" in subject_code:
-        status = ValidationStatus.NEEDS_REVIEW
-        warnings.append(f"Unusual character in subject code: '{subject_code}'")
-    elif subject_code.startswith("MIS "):
-        status = ValidationStatus.NEEDS_REVIEW
-        warnings.append(f"Non-standard department prefix in subject code: '{subject_code}'")
-    elif not session_type and subject_code not in ("Orientation", "Business English"):
+    elif not session_type and not _type_optional(subject_code):
         status = ValidationStatus.NEEDS_REVIEW
         warnings.append("Missing session type (L/T/P)")
 
